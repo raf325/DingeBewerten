@@ -3,49 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase Rater 1-10</title>
+    <title>Rating App mit Aggregation</title>
     <style>
-        /* (Gleiches Styling wie vorher) */
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f2f5; }
-        #app-container { background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 100%; }
-        #image-container { width: 100%; height: 250px; border-radius: 10px; overflow: hidden; margin-bottom: 1.5rem; background-color: #eee; }
-        #item-image { width: 100%; height: 100%; object-fit: cover; }
-        .controls { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
-        .slider-container { flex-grow: 1; display: flex; flex-direction: column; }
-        input[type=range] { width: 100%; cursor: pointer; }
-        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .hidden { display: none; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f7f6;
+        }
+
+        #app-container {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 450px;
+            width: 90%;
+        }
+
+        #item-name {
+            font-size: 1.8rem;
+            margin-bottom: 1.2rem;
+            color: #2d3436;
+        }
+
+        #image-container {
+            width: 100%;
+            height: 280px;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+            background-color: #dfe6e9;
+        }
+
+        #item-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .slider-wrapper {
+            flex-grow: 1;
+        }
+
+        input[type=range] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .rating-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #636e72;
+            margin-top: 8px;
+        }
+
+        #current-val {
+            font-weight: bold;
+            color: #0984e3;
+        }
+
+        button {
+            padding: 12px 24px;
+            background-color: #00b894;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        button:hover {
+            background-color: #00a884;
+            transform: scale(1.02);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #loading-overlay {
+            color: #636e72;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
 
 <div id="app-container">
     <div id="rater-box">
-        <h2 id="item-name">Lade...</h2>
-        <div id="image-container"><img id="item-image" src="" alt=""></div>
+        <h2 id="item-name">Lade Inhalte...</h2>
+        
+        <div id="image-container">
+            <img id="item-image" src="" alt="Vorschau">
+        </div>
+
         <div class="controls">
-            <div class="slider-container">
+            <div class="slider-wrapper">
                 <input type="range" id="rating-slider" min="1" max="10" value="5">
-                <div style="display:flex; justify-content:space-between; font-size: 0.8rem;">
-                    <span>1</span> <span id="current-val">Wert: 5</span> <span>10</span>
+                <div class="rating-labels">
+                    <span>1</span>
+                    <span id="current-val">Wert: 5</span>
+                    <span>10</span>
                 </div>
             </div>
             <button id="submit-btn">Senden</button>
         </div>
+        <p id="loading-overlay" class="hidden">Speichere in Cloud...</p>
     </div>
+
     <div id="finish-message" class="hidden">
-        <h2>Danke!</h2>
-        <p>Alle Bewertungen wurden in der Cloud gespeichert.</p>
-        <button onclick="location.reload()">Nochmal?</button>
+        <h2>Vielen Dank!</h2>
+        <p>Deine Bewertungen wurden erfolgreich in der Datenbank aktualisiert.</p>
+        <button onclick="location.reload()">Nochmal bewerten</button>
     </div>
 </div>
 
 <script type="module">
-    // Firebase SDKs importieren
+    // Firebase Module importieren
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // HIER DEINE FIREBASE CONFIG EINFÜGEN!
+    // --- HIER DEINE KONFIGURATION EINSETZEN ---
     const firebaseConfig = {
         apiKey: "AIzaSyDzoZamebiQdgTzytRcx57VmoyLDHdgHaQ",
         authDomain: "randombewertungen.firebaseapp.com",
@@ -55,55 +152,89 @@
         appId: "1:747722741918:web:35cacdc04cad73adaf838f"
     };
 
-    // Firebase initialisieren
+    // Firebase Initialisierung
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    // Liste der Items
     const items = [
         { name: "Pizza Hawaii", img: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500" },
-        { name: "Hausaufgaben", img: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=500" },
-        { name: "Wochenende", img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500" }
+        { name: "Hausaufgaben am Sonntag", img: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=500" },
+        { name: "Kaffee am Morgen", img: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=500" },
+        { name: "Regenwetter im Urlaub", img: "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=500" }
     ];
 
     let currentIndex = 0;
-    const slider = document.getElementById('rating-slider');
-    const valDisplay = document.getElementById('current-val');
 
-    slider.oninput = () => valDisplay.textContent = `Wert: ${slider.value}`;
+    // DOM Elemente
+    const itemNameEl = document.getElementById('item-name');
+    const itemImageEl = document.getElementById('item-image');
+    const sliderEl = document.getElementById('rating-slider');
+    const valDisplayEl = document.getElementById('current-val');
+    const submitBtn = document.getElementById('submit-btn');
+    const loadingEl = document.getElementById('loading-overlay');
+    const raterBox = document.getElementById('rater-box');
+    const finishMessage = document.getElementById('finish-message');
 
+    // UI Aktualisierung
     function updateUI() {
         if (currentIndex < items.length) {
-            document.getElementById('item-name').textContent = items[currentIndex].name;
-            document.getElementById('item-image').src = items[currentIndex].img;
-            slider.value = 5;
-            valDisplay.textContent = "Wert: 5";
+            const item = items[currentIndex];
+            itemNameEl.textContent = item.name;
+            itemImageEl.src = item.img;
+            sliderEl.value = 5;
+            valDisplayEl.textContent = "Wert: 5";
+            submitBtn.disabled = false;
+            loadingEl.classList.add('hidden');
         } else {
-            document.getElementById('rater-box').classList.add('hidden');
-            document.getElementById('finish-message').classList.remove('hidden');
+            raterBox.classList.add('hidden');
+            finishMessage.classList.remove('hidden');
         }
     }
 
-    document.getElementById('submit-btn').onclick = async () => {
-        const ratingValue = parseInt(slider.value);
+    // Slider Event
+    sliderEl.addEventListener('input', () => {
+        valDisplayEl.textContent = `Wert: ${sliderEl.value}`;
+    });
+
+    // Senden Event (Aggregation)
+    submitBtn.addEventListener('click', async () => {
+        const ratingValue = parseInt(sliderEl.value);
         const itemName = items[currentIndex].name;
+        
+        // Eindeutige ID für das Dokument erstellen (z.B. "kaffee_am_morgen")
+        const docId = itemName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+
+        // UI sperren während des Speicherns
+        submitBtn.disabled = true;
+        loadingEl.classList.remove('hidden');
 
         try {
-            // Daten in Firestore speichern
-            await addDoc(collection(db, "bewertungen"), {
-                item: itemName,
-                rating: ratingValue,
-                timestamp: serverTimestamp()
-            });
+            // Referenz auf das Dokument in der Sammlung "stats"
+            const statsRef = doc(db, "stats", docId);
+
+            // Dokument aktualisieren oder erstellen (merge: true)
+            await setDoc(statsRef, {
+                name: itemName,
+                count: increment(1),             // Zähler + 1
+                totalRating: increment(ratingValue) // Summe + gewählter Wert
+            }, { merge: true });
+
+            console.log(`Daten für ${itemName} erfolgreich gespeichert.`);
             
-            console.log("Gespeichert!");
+            // Nächstes Item laden
             currentIndex++;
             updateUI();
-        } catch (e) {
-            console.error("Fehler beim Speichern: ", e);
-            alert("Fehler beim Speichern der Daten.");
-        }
-    };
 
+        } catch (error) {
+            console.error("Firebase Fehler:", error);
+            alert("Fehler beim Speichern. Bitte überprüfe deine Firebase-Konfiguration!");
+            submitBtn.disabled = false;
+            loadingEl.classList.add('hidden');
+        }
+    });
+
+    // Start
     updateUI();
 </script>
 
