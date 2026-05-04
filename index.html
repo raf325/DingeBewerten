@@ -3,146 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rating App mit Aggregation</title>
+    <title>Community Rater Pro</title>
     <style>
+        :root {
+            --primary: #6c5ce7;
+            --secondary: #00b894;
+            --bg: #f0f2f5;
+            --card: #ffffff;
+        }
+
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
             display: flex;
             justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f4f7f6;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
-        #app-container {
-            background: white;
-            padding: 2.5rem;
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 450px;
-            width: 90%;
-        }
-
-        #item-name {
-            font-size: 1.8rem;
-            margin-bottom: 1.2rem;
-            color: #2d3436;
-        }
-
-        #image-container {
-            width: 100%;
-            height: 280px;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 1.5rem;
-            background-color: #dfe6e9;
-        }
-
-        #item-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .controls {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+        .main-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
             gap: 20px;
-        }
-
-        .slider-wrapper {
-            flex-grow: 1;
-        }
-
-        input[type=range] {
             width: 100%;
-            cursor: pointer;
+            max-width: 1400px;
         }
 
-        .rating-labels {
+        /* Gemeinsame Card-Styles */
+        .card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            height: fit-content;
+        }
+
+        h2 { margin-top: 0; font-size: 1.2rem; color: #333; border-bottom: 2px solid var(--bg); padding-bottom: 10px; }
+
+        /* LEADERBOARD (Links) */
+        #leaderboard-list { list-style: none; padding: 0; }
+        .leaderboard-item {
             display: flex;
             justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
             font-size: 0.9rem;
-            color: #636e72;
-            margin-top: 8px;
         }
+        .rank { font-weight: bold; color: var(--primary); margin-right: 10px; }
 
-        #current-val {
-            font-weight: bold;
-            color: #0984e3;
+        /* RATING AREA (Mitte) */
+        .rating-display { text-align: center; }
+        #item-image { width: 100%; height: 350px; object-fit: cover; border-radius: 10px; background: #eee; }
+        .controls { display: flex; align-items: center; gap: 15px; margin-top: 20px; }
+        .slider-box { flex-grow: 1; }
+        input[type=range] { width: 100%; }
+        button { 
+            cursor: pointer; border: none; border-radius: 8px; padding: 12px;
+            font-weight: bold; transition: 0.2s;
         }
+        #submit-rating { background: var(--secondary); color: white; }
 
-        button {
-            padding: 12px 24px;
-            background-color: #00b894;
-            color: white;
-            border: none;
-            border-radius: 8px;
+        /* UPLOAD AREA (Rechts) */
+        #drop-zone {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px;
             cursor: pointer;
-            font-size: 1rem;
-            font-weight: bold;
-            transition: transform 0.1s, background 0.2s;
+            transition: 0.2s;
+            margin-bottom: 10px;
         }
-
-        button:hover {
-            background-color: #00a884;
-            transform: scale(1.02);
+        #drop-zone.hover { border-color: var(--primary); background: #f8f8ff; }
+        #preview-img { width: 100%; display: none; margin-top: 10px; border-radius: 5px; }
+        input[type="text"] {
+            width: 100%; padding: 10px; margin-bottom: 10px;
+            border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;
         }
+        #upload-btn { background: var(--primary); color: white; width: 100%; }
 
-        button:active {
-            transform: scale(0.98);
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        #loading-overlay {
-            color: #636e72;
-            font-style: italic;
+        @media (max-width: 1000px) {
+            .main-layout { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
 
-<div id="app-container">
-    <div id="rater-box">
-        <h2 id="item-name">Lade Inhalte...</h2>
-        
-        <div id="image-container">
-            <img id="item-image" src="" alt="Vorschau">
-        </div>
-
-        <div class="controls">
-            <div class="slider-wrapper">
-                <input type="range" id="rating-slider" min="1" max="10" value="5">
-                <div class="rating-labels">
-                    <span>1</span>
-                    <span id="current-val">Wert: 5</span>
-                    <span>10</span>
-                </div>
-            </div>
-            <button id="submit-btn">Senden</button>
-        </div>
-        <p id="loading-overlay" class="hidden">Speichere in Cloud...</p>
+<div class="main-layout">
+    <div class="card">
+        <h2>Top 10 Leaderboard</h2>
+        <div id="leaderboard-list">Lade Ranking...</div>
     </div>
 
-    <div id="finish-message" class="hidden">
-        <h2>Vielen Dank!</h2>
-        <p>Deine Bewertungen wurden erfolgreich in der Datenbank aktualisiert.</p>
-        <button onclick="location.reload()">Nochmal bewerten</button>
+    <div class="card rating-display">
+        <h2 id="current-item-name">Warte auf Content...</h2>
+        <img id="item-image" src="" alt="Lade Bild...">
+        <div class="controls">
+            <div class="slider-box">
+                <input type="range" id="rating-slider" min="1" max="10" value="5">
+                <div style="display:flex; justify-content:space-between; font-size: 0.8rem;">
+                    <span>1</span> <span id="rating-val">Wert: 5</span> <span>10</span>
+                </div>
+            </div>
+            <button id="submit-rating">Voten</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Neues Item hinzufügen</h2>
+        <div id="drop-zone">
+            Bild hierher ziehen oder klicken
+            <input type="file" id="file-input" hidden accept="image/*">
+            <img id="preview-img" alt="Vorschau">
+        </div>
+        <input type="text" id="new-item-name" placeholder="Was ist das?">
+        <button id="upload-btn">Hochladen & Teilen</button>
+        <p id="upload-status" style="font-size: 0.8rem; color: #666;"></p>
     </div>
 </div>
 
 <script type="module">
-    // Firebase Module importieren
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, doc, setDoc, increment, onSnapshot, query, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-    // --- HIER DEINE KONFIGURATION EINSETZEN ---
+    // DEINE CONFIG HIER
     const firebaseConfig = {
         apiKey: "AIzaSyDzoZamebiQdgTzytRcx57VmoyLDHdgHaQ",
         authDomain: "randombewertungen.firebaseapp.com",
@@ -152,90 +138,140 @@
         appId: "1:747722741918:web:35cacdc04cad73adaf838f"
     };
 
-    // Firebase Initialisierung
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const storage = getStorage(app);
 
-    // Liste der Items
-    const items = [
-        { name: "Pizza Hawaii", img: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500" },
-        { name: "Hausaufgaben am Sonntag", img: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=500" },
-        { name: "Kaffee am Morgen", img: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=500" },
-        { name: "Regenwetter im Urlaub", img: "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=500" }
-    ];
+    let allItems = [];
+    let currentItemIndex = 0;
+    let selectedFile = null;
 
-    let currentIndex = 0;
+    // --- LOGIK: ITEMS LADEN & BEWERTEN ---
 
-    // DOM Elemente
-    const itemNameEl = document.getElementById('item-name');
-    const itemImageEl = document.getElementById('item-image');
-    const sliderEl = document.getElementById('rating-slider');
-    const valDisplayEl = document.getElementById('current-val');
-    const submitBtn = document.getElementById('submit-btn');
-    const loadingEl = document.getElementById('loading-overlay');
-    const raterBox = document.getElementById('rater-box');
-    const finishMessage = document.getElementById('finish-message');
+    async function loadItems() {
+        const querySnapshot = await getDocs(collection(db, "items"));
+        allItems = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Mische die Liste zufällig
+        allItems.sort(() => Math.random() - 0.5);
+        showNextItem();
+    }
 
-    // UI Aktualisierung
-    function updateUI() {
-        if (currentIndex < items.length) {
-            const item = items[currentIndex];
-            itemNameEl.textContent = item.name;
-            itemImageEl.src = item.img;
-            sliderEl.value = 5;
-            valDisplayEl.textContent = "Wert: 5";
-            submitBtn.disabled = false;
-            loadingEl.classList.add('hidden');
+    function showNextItem() {
+        if (currentItemIndex < allItems.length) {
+            const item = allItems[currentItemIndex];
+            document.getElementById('current-item-name').textContent = item.name;
+            document.getElementById('item-image').src = item.url;
+            document.getElementById('rating-slider').value = 5;
+            document.getElementById('rating-val').textContent = "Wert: 5";
         } else {
-            raterBox.classList.add('hidden');
-            finishMessage.classList.remove('hidden');
+            document.getElementById('current-item-name').textContent = "Alles bewertet! Lade neue hoch.";
+            document.getElementById('item-image').src = "https://via.placeholder.com/400?text=Fertig";
         }
     }
 
-    // Slider Event
-    sliderEl.addEventListener('input', () => {
-        valDisplayEl.textContent = `Wert: ${sliderEl.value}`;
-    });
+    document.getElementById('rating-slider').oninput = (e) => {
+        document.getElementById('rating-val').textContent = `Wert: ${e.target.value}`;
+    };
 
-    // Senden Event (Aggregation)
-    submitBtn.addEventListener('click', async () => {
-        const ratingValue = parseInt(sliderEl.value);
-        const itemName = items[currentIndex].name;
+    document.getElementById('submit-rating').onclick = async () => {
+        if (currentItemIndex >= allItems.length) return;
         
-        // Eindeutige ID für das Dokument erstellen (z.B. "kaffee_am_morgen")
-        const docId = itemName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        const item = allItems[currentItemIndex];
+        const val = parseInt(document.getElementById('rating-slider').value);
+        
+        const statsRef = doc(db, "stats", item.id);
+        await setDoc(statsRef, {
+            name: item.name,
+            count: increment(1),
+            totalRating: increment(val)
+        }, { merge: true });
 
-        // UI sperren während des Speicherns
-        submitBtn.disabled = true;
-        loadingEl.classList.remove('hidden');
+        currentItemIndex++;
+        showNextItem();
+    };
 
-        try {
-            // Referenz auf das Dokument in der Sammlung "stats"
-            const statsRef = doc(db, "stats", docId);
+    // --- LOGIK: LEADERBOARD (Live-Update) ---
 
-            // Dokument aktualisieren oder erstellen (merge: true)
-            await setDoc(statsRef, {
-                name: itemName,
-                count: increment(1),             // Zähler + 1
-                totalRating: increment(ratingValue) // Summe + gewählter Wert
-            }, { merge: true });
+    onSnapshot(collection(db, "stats"), (snapshot) => {
+        let stats = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const avg = data.count > 0 ? (data.totalRating / data.count).toFixed(1) : 0;
+            stats.push({ ...data, avg: parseFloat(avg) });
+        });
 
-            console.log(`Daten für ${itemName} erfolgreich gespeichert.`);
-            
-            // Nächstes Item laden
-            currentIndex++;
-            updateUI();
+        // Sortiere nach Durchschnitt, dann nach Anzahl der Stimmen
+        stats.sort((a, b) => b.avg - a.avg || b.count - a.count);
 
-        } catch (error) {
-            console.error("Firebase Fehler:", error);
-            alert("Fehler beim Speichern. Bitte überprüfe deine Firebase-Konfiguration!");
-            submitBtn.disabled = false;
-            loadingEl.classList.add('hidden');
-        }
+        const listEl = document.getElementById('leaderboard-list');
+        listEl.innerHTML = stats.slice(0, 10).map((s, i) => `
+            <div class="leaderboard-item">
+                <span><span class="rank">#${i+1}</span> ${s.name}</span>
+                <span style="color:var(--secondary); font-weight:bold">${s.avg} ★</span>
+            </div>
+        `).join('');
     });
 
-    // Start
-    updateUI();
+    // --- LOGIK: UPLOAD ---
+
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    dropZone.onclick = () => fileInput.click();
+    dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('hover'); };
+    dropZone.ondragleave = () => dropZone.classList.remove('hover');
+    dropZone.ondrop = (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('hover');
+        handleFile(e.dataTransfer.files[0]);
+    };
+    fileInput.onchange = (e) => handleFile(e.target.files[0]);
+
+    function handleFile(file) {
+        if (file && file.type.startsWith('image/')) {
+            selectedFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = document.getElementById('preview-img');
+                img.src = e.target.result;
+                img.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    document.getElementById('upload-btn').onclick = async () => {
+        const name = document.getElementById('new-item-name').value;
+        const status = document.getElementById('upload-status');
+
+        if (!selectedFile || !name) {
+            alert("Bitte Bild wählen und Namen eingeben!");
+            return;
+        }
+
+        status.textContent = "Lade hoch...";
+        try {
+            // 1. Bild in Storage laden
+            const storageRef = ref(storage, 'items/' + Date.now() + "_" + selectedFile.name);
+            const snapshot = await uploadBytes(storageRef, selectedFile);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            // 2. Dokument in Firestore "items" erstellen
+            await addDoc(collection(db, "items"), {
+                name: name,
+                url: downloadURL,
+                timestamp: new Date()
+            });
+
+            status.textContent = "Erfolg! Lade Seite neu...";
+            setTimeout(() => location.reload(), 1500);
+        } catch (e) {
+            console.error(e);
+            status.textContent = "Fehler!";
+        }
+    };
+
+    loadItems();
 </script>
 
 </body>
